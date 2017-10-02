@@ -19,14 +19,14 @@ function! s:gtags_add(file) abort
 endfunction
 
 function! s:gtags_auto_load() abort
-  let l:path = gen_tags#find_project_root()
+  let l:path = gen_tags#get_db_dir()
   let l:file = l:path . '/' . s:file
   call s:gtags_add(l:file)
 endfunction
 
 "Generate GTAGS
 function! s:gtags_db_gen() abort
-  let l:path = gen_tags#find_project_root()
+  let l:path = gen_tags#get_db_dir()
   let b:file = l:path . '/' . s:file
 
   "Check if current path in the blacklist
@@ -42,38 +42,18 @@ function! s:gtags_db_gen() abort
 
   let l:cmd = 'gtags ' . l:path
 
-  function! s:gtags_backup_cwd(path) abort
-    let l:bak = getcwd()
-    let $GTAGSPATH = a:path
-    lcd $GTAGSPATH
-
-    return l:bak
-  endfunction
-
-  function! s:gtags_restore_cwd(bak) abort
-    "Restore cwd
-    let $GTAGSPATH = a:bak
-    lcd $GTAGSPATH
-    let $GTAGSPATH = ''
-  endfunction
-
   function! s:gtags_db_gen_done(...) abort
-    call s:gtags_restore_cwd(b:bak)
-
     call s:gtags_add(b:file)
     unlet b:file
-    unlet b:bak
   endfunction
 
-  "Backup cwd
-  let b:bak = s:gtags_backup_cwd(l:path)
-
+  call gen_tags#mkdir(l:path)
   call gen_tags#echo('Generate GTAGS in background')
   call gen_tags#system_async(l:cmd, function('s:gtags_db_gen_done'))
 endfunction
 
 function! s:gtags_clear() abort
-  let l:path = gen_tags#find_project_root()
+  let l:path = gen_tags#get_db_dir()
   let l:list = ['GTAGS', 'GPATH', 'GRTAGS']
 
   execute 'cscope kill -1'
@@ -87,7 +67,7 @@ function! s:gtags_clear() abort
 endfunction
 
 function! s:gtags_update() abort
-  let l:path = gen_tags#find_project_root()
+  let l:path = gen_tags#get_db_dir()
   let l:file = l:path . '/' . s:file
 
   if !filereadable(l:file)
@@ -107,7 +87,7 @@ function! s:gtags_auto_gen() abort
   endif
 
   " If tags exist, return
-  let l:path = gen_tags#find_project_root()
+  let l:path = gen_tags#get_db_dir()
   let b:file = l:path . '/' . s:file
   if filereadable(b:file)
     call s:gtags_update()
@@ -131,6 +111,13 @@ function! gen_tags#gtags#init() abort
   if !exists('g:gen_tags#gtags_auto_gen')
     let g:gen_tags#gtags_auto_gen = 0
   endif
+
+  if !exists('g:gen_tags#gtags_use_cache_dir')
+    let g:gen_tags#gtags_use_cache_dir = g:gen_tags#use_cache_dir
+  endif
+
+  let $GTAGSROOT = gen_tags#find_project_root()
+  let $GTAGSDBPATH = gen_tags#get_db_dir()
 
   set cscopetag
   set cscopeprg=gtags-cscope

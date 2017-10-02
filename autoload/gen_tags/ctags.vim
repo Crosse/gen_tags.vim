@@ -14,27 +14,14 @@
 "       :ClearCtags
 " ============================================================================
 
-function! s:ctags_get_db_dir() abort
-  let l:root = gen_tags#find_project_root()
-
-  let l:type = gen_tags#get_scm_type()
-  if g:gen_tags#ctags_use_cache_dir == 0 && !empty(l:type)
-    let l:tagdir = l:root . '/' . l:type . '/tags_dir'
-  else
-    let l:tagdir = '$HOME/.cache/tags_dir/' . gen_tags#get_db_name(l:root)
-  endif
-
-  return gen_tags#fix_path(l:tagdir)
-endfunction
-
 function! s:ctags_get_db_name() abort
-  let l:file = s:ctags_get_db_dir() . '/' . s:ctags_db
+  let l:file = gen_tags#get_db_dir() . '/' . s:ctags_db
 
   return l:file
 endfunction
 
 function! s:ctags_get_extend_list() abort
-  let l:file = s:ctags_get_db_dir() . '/' . s:ext
+  let l:file = gen_tags#get_db_dir() . '/' . s:ext
 
   if filereadable(l:file)
     let l:list = readfile(l:file)
@@ -45,16 +32,9 @@ function! s:ctags_get_extend_list() abort
 endfunction
 
 function! s:ctags_get_extend_name(item) abort
-  let l:file = s:ctags_get_db_dir() . '/' . gen_tags#get_db_name(a:item)
+  let l:file = gen_tags#get_db_dir() . '/' . gen_tags#get_db_name(a:item)
 
   return l:file
-endfunction
-
-"Create ctags root dir and cwd db dir.
-function! s:ctags_mkdir(dir) abort
-  if !isdirectory(a:dir)
-    call mkdir(a:dir, 'p')
-  endif
 endfunction
 
 function! s:ctags_add(file) abort
@@ -76,12 +56,12 @@ function! s:ctags_gen(filename, dir) abort
     return
   endif
 
-  let l:dir = s:ctags_get_db_dir()
+  let l:dir = gen_tags#get_db_dir()
 
 
   call gen_tags#echo('Generate project ctags database in backgroud')
 
-  call s:ctags_mkdir(l:dir)
+  call gen_tags#mkdir(l:dir)
 
   let l:ctags_bin = g:gen_tags#ctags_bin
 
@@ -116,8 +96,8 @@ function! s:ctags_ext_edit() abort
     autocmd BufWritePost ext.conf call s:ctags_ext_gen()
   augroup END
 
-  let l:dir = s:ctags_get_db_dir()
-  call s:ctags_mkdir(l:dir)
+  let l:dir = gen_tags#get_db_dir()
+  call gen_tags#mkdir(l:dir)
   let l:file = l:dir . '/' . s:ext
   exec 'split' l:file
 endfunction
@@ -152,13 +132,13 @@ function! s:ctags_clear(bang) abort
     endfor
   else
     "Remove all files include tag folder
-    let l:dir = s:ctags_get_db_dir()
+    let l:dir = gen_tags#get_db_dir()
     call delete(l:dir, 'rf')
   endif
 endfunction
 
 function! s:ctags_auto_update() abort
-  let l:tagfile = s:ctags_get_db_dir() . '/' . s:ctags_db
+  let l:tagfile = gen_tags#get_db_dir() . '/' . s:ctags_db
 
   if !filereadable(l:tagfile)
     return
@@ -181,7 +161,7 @@ function! s:ctags_auto_gen() abort
   endif
 
   " If tags exist, return
-  let l:file = s:ctags_get_db_dir() . '/' . s:ctags_db
+  let l:file = gen_tags#get_db_dir() . '/' . s:ctags_db
   if filereadable(l:file)
     return
   endif
@@ -206,7 +186,7 @@ function! gen_tags#ctags#init() abort
   endif
 
   if !exists('g:gen_tags#ctags_use_cache_dir')
-    let g:gen_tags#ctags_use_cache_dir = 1
+    let g:gen_tags#ctags_use_cache_dir = g:gen_tags#use_cache_dir
   endif
 
   "Prune tags file before incremental update
@@ -279,7 +259,7 @@ function! s:ctags_prune(tagfile, file) abort
 endfunction
 
 function! s:ctags_update(file) abort
-  let l:dir = s:ctags_get_db_dir()
+  let l:dir = gen_tags#get_db_dir()
   let l:file = l:dir . '/' . s:ctags_db
   let l:cmd = g:gen_tags#ctags_bin . ' -u -f '. l:file . ' ' . g:gen_tags#ctags_opts .
         \ ' -a ' .  gen_tags#find_project_root() . '/' . a:file

@@ -4,9 +4,13 @@
 " Description: This file contains some command function for other file.
 " ============================================================================
 
-"GLobal variables
+"Global variables
 if !exists('g:gen_tags#verbose')
   let g:gen_tags#verbose = 0
+endif
+
+if !exists('g:gen_tags#use_cache_dir')
+    let g:gen_tags#use_cache_dir = 0
 endif
 
 "Initial blacklist
@@ -61,6 +65,20 @@ function! gen_tags#find_project_root() abort
   return s:project_root
 endfunction
 
+" Get the *tags database path
+function! gen_tags#get_db_dir() abort
+  let l:root = gen_tags#find_project_root()
+
+  let l:type = gen_tags#get_scm_type()
+  if g:gen_tags#use_cache_dir == 0 && !empty(l:type)
+    let l:tagdir = l:root . '/' . l:type . '/tags_dir'
+  else
+    let l:tagdir = '$HOME/.cache/tags_dir/' . gen_tags#get_db_name(l:root)
+  endif
+
+  return gen_tags#fix_path(l:tagdir)
+endfunction
+
 "Prune exit job from job list
 function! s:job_prune(cmd) abort
   for l:item in s:job_list
@@ -110,7 +128,7 @@ endfunction
 
 "Fix shellslash for windows
 function! gen_tags#fix_path(path) abort
-  let l:path = expand(a:path)
+  let l:path = expand(a:path, 1)
   if has('win32')
     let l:path = substitute(l:path, '\\', '/', 'g')
   endif
@@ -122,6 +140,13 @@ endfunction
 function! gen_tags#get_db_name(path) abort
   let l:fold = substitute(a:path, '/\|\\\|\ \|:\|\.', '', 'g')
   return l:fold
+endfunction
+
+"Create *tags root dir and cwd db dir.
+function! gen_tags#mkdir(dir) abort
+  if !isdirectory(a:dir)
+    call mkdir(a:dir, 'p')
+  endif
 endfunction
 
 function! gen_tags#echo(str) abort
@@ -243,6 +268,6 @@ function! gen_tags#isblacklist(path) abort
     endif
   endfor
 
-  call gen_tags#echo('Did NOT found path ' . a:path . ' in the blacklist')
+  call gen_tags#echo('Did NOT find path ' . a:path . ' in the blacklist')
   return 0
 endfunction
